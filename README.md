@@ -61,12 +61,12 @@ Key tables: `employees`, `payroll`, `division`, `employee_division`, `job_titles
 
 ## Setup
 
-1. Install MySQL and create the schema:
+1. Install MySQL and create the schema (use `cmd /c` on Windows):
    ```
    mysql -u root -p < src/resources/db/ems_create_mysql.sql
    mysql -u root -p < src/resources/db/ems_insert_mysql.sql
    ```
-2. Update the connection constants in [EMS.java](src/EMS.java) (`URL`, `DB_USER`, `DB_PASS`) to match your local MySQL instance.
+2. Copy `.env.example` to `.env` in the project root and set `DB_URL`, `DB_USER`, and `DB_PASS` to match your local MySQL instance. `.env` is gitignored; system environment variables with the same names override it.
 3. Compile and run with the JDBC driver on the classpath:
    ```
    javac -cp lib/mysql-connector-j-9.1.0.jar -d out src/*.java src/resources/*.java
