@@ -1,3 +1,5 @@
+USE ems;
+
 INSERT INTO cities (cityName) VALUES
 ('Atlanta'),
 ('Decatur'),
