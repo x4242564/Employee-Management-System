@@ -3,45 +3,13 @@ import java.sql.*;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 public class EMS {
 
-    final static Map<String, String> ENV = loadEnv(".env");
-    final static String URL = env("DB_URL");
-    final static String DB_USER = env("DB_USER");
-    final static String DB_PASS = env("DB_PASS");
-
-    // Reads KEY=VALUE pairs from a .env file; blank lines and # comments are skipped
-    private static Map<String, String> loadEnv(String fileName) {
-        Map<String, String> vars = new HashMap<>();
-        Path path = Paths.get(fileName);
-        if (!Files.exists(path)) return vars;
-        try {
-            for (String line : Files.readAllLines(path)) {
-                line = line.trim();
-                if (line.isEmpty() || line.startsWith("#") || !line.contains("=")) continue;
-                int eq = line.indexOf('=');
-                vars.put(line.substring(0, eq).trim(), line.substring(eq + 1).trim());
-            }
-        } catch (IOException e) {
-            System.err.println("Could not read " + fileName + ": " + e.getMessage());
-        }
-        return vars;
-    }
-
-    // System environment variables take precedence over values in .env
-    private static String env(String key) {
-        String value = System.getenv(key);
-        if (value == null) value = ENV.get(key);
-        if (value == null) throw new IllegalStateException("Missing required setting: " + key + " (set it in .env)");
-        return value;
-    }
+    final  static String URL = "jdbc:mysql://localhost:3306/ems";
+    final  static String DB_USER = "root";
+    final  static String DB_PASS = "password";
 
     public static void main(String[] args) {
         Login(URL, DB_USER, DB_PASS);
@@ -343,15 +311,7 @@ public class EMS {
                 range[0], range[1], URL, DB_USER, DB_PASS);
 
         System.out.println("\nTotal Pay by Job Title — " + ym);
-        System.out.println("Job Title\t\tTotal Pay");
-        System.out.println("-----------------------------------");
-        if (totals.isEmpty()) {
-            System.out.println("(no data)");
-            return;
-        }
-        for (Map.Entry<String, Double> e : totals.entrySet()) {
-            System.out.printf("%-20s\t$%,.2f%n", e.getKey(), e.getValue());
-        }
+        printTotals("Job Title", totals);
     }
 
     public static void payByDivisionReport() {
@@ -366,15 +326,7 @@ public class EMS {
                 range[0], range[1], URL, DB_USER, DB_PASS);
 
         System.out.println("\nTotal Pay by Division — " + ym);
-        System.out.println("Division\t\tTotal Pay");
-        System.out.println("-----------------------------------");
-        if (totals.isEmpty()) {
-            System.out.println("(no data)");
-            return;
-        }
-        for (Map.Entry<String, Double> e : totals.entrySet()) {
-            System.out.printf("%-20s\t$%,.2f%n", e.getKey(), e.getValue());
-        }
+        printTotals("Division", totals);
     }
 
     public static void newHiresReport() {
@@ -384,18 +336,11 @@ public class EMS {
         ArrayList<Employee> hires = EmpDataAccess.NewHires(start, end, URL, DB_USER, DB_PASS);
 
         System.out.println("\nNew Hires Between " + start + " and " + end);
-        System.out.println("ID\tName\t\tEmail\t\tHire Date");
-        System.out.println("--------------------------------------------------");
         if (hires.isEmpty()) {
             System.out.println("(no hires in this range)");
             return;
         }
-        for (Employee e : hires) {
-            System.out.println(e.getEmpID() + "\t"
-                    + e.getFname() + " " + e.getLname() + "\t"
-                    + e.getEmail() + "\t"
-                    + e.getHireDate());
-        }
+        printEmployeeTable(hires);
     }
 
     // ============================================================
@@ -440,16 +385,19 @@ public class EMS {
                 PayrollDataAccess.getPayHistory(empID, URL, DB_USER, DB_PASS);
 
         System.out.println("\n--- Pay History (most recent first) ---");
-        System.out.println("Pay Date\tPeriod\t\t\tGross\tNet\tSalary");
-        System.out.println("---------------------------------------------------------------");
+        String row = "%-12s%-28s%12s%12s%14s%n";
+        System.out.printf(row, "Pay Date", "Period", "Gross", "Net", "Salary");
+        System.out.println("-".repeat(78));
         if (stubs.isEmpty()) {
             System.out.println("(no pay history)");
             return;
         }
         for (PayrollDataAccess.PayStub s : stubs) {
-            System.out.printf("%s\t%s to %s\t$%,.2f\t$%,.2f\t$%,.2f%n",
-                    s.payDate, s.payPeriodStart, s.payPeriodEnd,
-                    s.grossPay, s.netPay, s.salaryAmount);
+            System.out.printf(row,
+                    s.payDate, s.payPeriodStart + " to " + s.payPeriodEnd,
+                    String.format("$%,.2f", s.grossPay),
+                    String.format("$%,.2f", s.netPay),
+                    String.format("$%,.2f", s.salaryAmount));
         }
     }
 
@@ -459,16 +407,42 @@ public class EMS {
 
     public static void printEmployees(ArrayList<Employee> myEmployees) {
         System.out.println("\nCurrent Employees Report at Company Z\n");
-        System.out.println("ID\tName\t\tEmail\t\t\tHire Date");
         if (myEmployees == null || myEmployees.isEmpty()) {
             System.out.println("(no employees)");
             return;
         }
-        for (Employee e : myEmployees) {
-            System.out.println(e.getEmpID() + "\t"
-                    + e.getFname() + " " + e.getLname() + "\t"
-                    + e.getEmail() + "\t"
-                    + e.getHireDate());
+        printEmployeeTable(myEmployees);
+    }
+
+    // Columns are sized to the longest value so long names/emails stay aligned
+    private static void printEmployeeTable(ArrayList<Employee> emps) {
+        int nameW = "Name".length(), emailW = "Email".length();
+        for (Employee e : emps) {
+            nameW = Math.max(nameW, (e.getFname() + " " + e.getLname()).length());
+            emailW = Math.max(emailW, e.getEmail().length());
+        }
+        String row = "%-6s  %-" + nameW + "s  %-" + emailW + "s  %s%n";
+        System.out.printf(row, "ID", "Name", "Email", "Hire Date");
+        System.out.println("-".repeat(6 + nameW + emailW + 10 + 6));
+        for (Employee e : emps) {
+            System.out.printf(row, e.getEmpID(), e.getFname() + " " + e.getLname(),
+                    e.getEmail(), e.getHireDate());
+        }
+    }
+
+    // Prints a name -> total table with the name column sized to the longest entry
+    private static void printTotals(String label, Map<String, Double> totals) {
+        int w = label.length();
+        for (String k : totals.keySet()) w = Math.max(w, k.length());
+        String row = "%-" + w + "s  %14s%n";
+        System.out.printf(row, label, "Total Pay");
+        System.out.println("-".repeat(w + 16));
+        if (totals.isEmpty()) {
+            System.out.println("(no data)");
+            return;
+        }
+        for (Map.Entry<String, Double> e : totals.entrySet()) {
+            System.out.printf(row, e.getKey(), String.format("$%,.2f", e.getValue()));
         }
     }
 

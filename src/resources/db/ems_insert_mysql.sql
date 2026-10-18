@@ -71,12 +71,12 @@ INSERT INTO system_admins (username, firstName, lastName, password, passwordHash
 ('developer', 'Tung Tung Tung', 'Sahur', 'tripletsahur', 'OcAJ9CIMc36+G53+zZPz5XDNVbWVvkHxXBIE53HF6/Q=', 'R7dyNQpY/KN4frGQXyPI7A==');
 
 INSERT INTO employee_division (empID, divID, assignedDate) VALUES
-(101, 1, default),
-(102, 2, default);
+(101, 1, '2022-01-15'),
+(102, 2, '2023-07-15');
 
 INSERT INTO employee_job_titles (empID, job_titleID, effectiveDate, endDate) VALUES
-(101, 1, default, NULL),
-(102, 2, default, NULL);
+(101, 1, '2022-01-15', NULL),
+(102, 2, '2023-07-15', NULL);
 
 INSERT INTO payroll (
     empID,

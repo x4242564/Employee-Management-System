@@ -66,6 +66,11 @@ Key tables: `employees`, `payroll`, `division`, `employee_division`, `job_titles
    mysql -u root -p < src/resources/db/ems_create_mysql.sql
    mysql -u root -p < src/resources/db/ems_insert_mysql.sql
    ```
+   Optionally load extra test data (36 more employees across 7 divisions, with job history and Jan–Sep 2026 payroll):
+   ```
+   mysql -u root -p < src/resources/db/ems_test_data_mysql.sql
+   ```
+   Test logins follow the pattern `dcarter` / `Welcome103!` (first initial + last name / `Welcome<empID>!`).
 2. Copy `.env.example` to `.env` in the project root and set `DB_URL`, `DB_USER`, and `DB_PASS` to match your local MySQL instance. `.env` is gitignored; system environment variables with the same names override it.
 3. Compile and run with the JDBC driver on the classpath:
    ```
