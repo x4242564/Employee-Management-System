@@ -1,0 +1,6 @@
+# Local environment config
+.env
+
+# Build output
+out/
+*.class

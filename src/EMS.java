@@ -3,13 +3,45 @@ import java.sql.*;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class EMS {
 
-    final  static String URL = "jdbc:mysql://localhost:3306/ems";
-    final  static String DB_USER = "root";
-    final  static String DB_PASS = "password";
+    final static Map<String, String> ENV = loadEnv(".env");
+    final static String URL = env("DB_URL");
+    final static String DB_USER = env("DB_USER");
+    final static String DB_PASS = env("DB_PASS");
+
+    // Reads KEY=VALUE pairs from a .env file; blank lines and # comments are skipped
+    private static Map<String, String> loadEnv(String fileName) {
+        Map<String, String> vars = new HashMap<>();
+        Path path = Paths.get(fileName);
+        if (!Files.exists(path)) return vars;
+        try {
+            for (String line : Files.readAllLines(path)) {
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith("#") || !line.contains("=")) continue;
+                int eq = line.indexOf('=');
+                vars.put(line.substring(0, eq).trim(), line.substring(eq + 1).trim());
+            }
+        } catch (IOException e) {
+            System.err.println("Could not read " + fileName + ": " + e.getMessage());
+        }
+        return vars;
+    }
+
+    // System environment variables take precedence over values in .env
+    private static String env(String key) {
+        String value = System.getenv(key);
+        if (value == null) value = ENV.get(key);
+        if (value == null) throw new IllegalStateException("Missing required setting: " + key + " (set it in .env)");
+        return value;
+    }
 
     public static void main(String[] args) {
         Login(URL, DB_USER, DB_PASS);
